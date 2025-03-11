@@ -4,47 +4,49 @@ const { createProxyMiddleware } = require("http-proxy-middleware");
 
 const app = express();
 
-// Enable CORS for all requests
 app.use(cors());
-require('dotenv').config()
-// Allow JSON body parsing
+require("dotenv").config();
 app.use(express.json());
 
-// Proxy requests to the HTTP API
-// app.use(
-//   "/api",
-//   createProxyMiddleware({
-//     target: process.env.REACT_APP_BASEURL, // Target API
-//     changeOrigin: true,
-//     secure: false, // Allow HTTP
-//     pathRewrite: { "^/api": "/v2" }, // Rewrite "/api" to "/v2"
-//     onProxyReq: (proxyReq, req, res) => {
-//       if (req.body) {
-//         let bodyData = JSON.stringify(req.body);
-//         proxyReq.setHeader("Content-Type", "application/json");
-//         proxyReq.setHeader("Content-Length", Buffer.byteLength(bodyData));
-//         proxyReq.write(bodyData);
-//       }
-//     },
-//   })
-// );
-
-app.use(
-    "/api",
-    createProxyMiddleware({
-      target: process.env.REACT_APP_BASEURL, 
-      changeOrigin: true,
-      secure: false,
-      pathRewrite: { "^/api": "/v2" },
-      timeout: 60000, // 60 seconds timeout
-      proxyTimeout: 60000,
-    })
-  );
-
-const PORT = process.env.REACT_APP_PORT;
-app.listen(PORT, () => {
-  console.log(`Proxy server running on port ${PORT}`);
+app.use((req, res, next) => {
+  console.log(`Incoming Request: ${req.method} ${req.url}`);
+  console.log("Headers:", req.headers);
+  console.log("Body:", req.body);
+  next();
 });
 
 
+app.use(
+  "/api",
+  createProxyMiddleware({
+    target: process.env.REACT_APP_BASEURL, 
+    changeOrigin: true,
+    secure: false,
+    pathRewrite: { "^/api": "/v2" },
+    timeout: 60000, // 60 seconds timeout
+    proxyTimeout: 60000,
+    headers: { "Connection": "keep-alive" },
+    logLevel: "debug", // ✅ Enable Debugging
 
+    // ✅ Log Proxy Errors
+    onError: (err, req, res) => {
+      console.error("Proxy Error:", err);
+      res.status(500).json({ error: "Proxy failed to connect to target API" });
+    },
+
+    // ✅ Log Proxy Requests
+    onProxyReq: (proxyReq, req, res) => {
+      console.log(`🔁 Forwarding request to: ${process.env.REACT_APP_BASEURL}${req.url}`);
+    },
+
+    // ✅ Log Proxy Responses
+    onProxyRes: (proxyRes, req, res) => {
+      console.log(`✅ Response received from target API: ${proxyRes.statusCode}`);
+    },
+  })
+);
+
+const PORT = process.env.REACT_APP_PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Proxy server running on port ${PORT}`);
+});
