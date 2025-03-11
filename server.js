@@ -1,33 +1,38 @@
-// server.js
-const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
+const express = require("express");
+const cors = require("cors");
+const { createProxyMiddleware } = require("http-proxy-middleware");
+
 const app = express();
 
-// Enable CORS for all routes
+// Enable CORS for all requests
 app.use(cors());
 require('dotenv').config()
-// Proxy middleware
-app.use('/api', async (req, res) => {
-  try {
-    const targetURL = process.env.REACT_APP_BASEURL + req.url.replace('/api', '');
-    const response = await axios({
-      method: req.method,
-      url: targetURL,
-      data: req.body,
-      headers: {
-        ...req.headers,
-        host: process.env.REACT_APP_HOST // Override host if needed
-      }
-    });
-    res.send(response.data);
-  } catch (error) {
-    res.status(error.response?.status || 500).send(error.message);
-  }
-});
+// Allow JSON body parsing
+app.use(express.json());
 
-app.options('*', cors());
+// Proxy requests to the HTTP API
+app.use(
+  "/api",
+  createProxyMiddleware({
+    target: process.env.REACT_APP_BASEURL, // Target API
+    changeOrigin: true,
+    secure: false, // Allow HTTP
+    pathRewrite: { "^/api": "/v2" }, // Rewrite "/api" to "/v2"
+    onProxyReq: (proxyReq, req, res) => {
+      if (req.body) {
+        let bodyData = JSON.stringify(req.body);
+        proxyReq.setHeader("Content-Type", "application/json");
+        proxyReq.setHeader("Content-Length", Buffer.byteLength(bodyData));
+        proxyReq.write(bodyData);
+      }
+    },
+  })
+);
 
 const PORT = process.env.REACT_APP_PORT;
-app.listen(PORT, () => console.log(`Proxy server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Proxy server running on port ${PORT}`);
+});
+
+
 
