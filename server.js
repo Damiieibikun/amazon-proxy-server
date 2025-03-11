@@ -10,14 +10,14 @@ require('dotenv').config()
 // Proxy middleware
 app.use('/api', async (req, res) => {
   try {
-    const targetURL = process.env.BASEURL + req.url.replace('/api', '');
+    const targetURL = process.env.REACT_APP_BASEURL + req.url.replace('/api', '');
     const response = await axios({
       method: req.method,
       url: targetURL,
       data: req.body,
       headers: {
         ...req.headers,
-        host: process.env.HOST // Override host if needed
+        host: process.env.REACT_APP_HOST // Override host if needed
       }
     });
     res.send(response.data);
@@ -28,6 +28,6 @@ app.use('/api', async (req, res) => {
 
 app.options('*', cors());
 
-const PORT = process.env.PORT;
+const PORT = process.env.REACT_APP_PORT;
 app.listen(PORT, () => console.log(`Proxy server running on port ${PORT}`));
 
