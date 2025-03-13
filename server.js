@@ -15,11 +15,10 @@ app.use((req, res, next) => {
   next();
 });
 
-
 app.use(
   "/api",
   createProxyMiddleware({
-    target: process.env.REACT_APP_BASEURL, 
+    target: process.env.BASEURL, 
     changeOrigin: true,
     secure: false,
     pathRewrite: { "^/api": "/v2" },
@@ -46,7 +45,7 @@ app.use(
   })
 );
 
-const PORT = process.env.REACT_APP_PORT || 5000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Proxy server running on port ${PORT}`);
 });
